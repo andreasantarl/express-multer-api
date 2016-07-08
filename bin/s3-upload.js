@@ -1,9 +1,17 @@
 'use strict';
 
+require('dotenv').config();
+
 const fs = require('fs');
 const fileType = require('file-type');
+const AWS = require('aws-sdk');
 
-let filename = process.argv[2] || '';
+const s3 = new AWS.S3({
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+}); //constructor function
 
 const mimeType = (data) => {
   return Object.assign({  //Amazon needs to know extension and mime type to save to bucket, so set defaults
@@ -12,6 +20,8 @@ const mimeType = (data) => {
   }, fileType(data));   //merge/overwrite first object with second object if don't have something in data: object that is returned with extension and mime type
   // by default, returns object based on NPM extension file-type
 };
+
+let filename = process.argv[2] || '';
 
 const readFile = (filename) => {
   return new Promise((resolve, reject) => {
@@ -32,8 +42,15 @@ const awsUpload = (file) => {
     ContentType: file.mime,
     Key: `test/test.${file.ext}`,
   };
-  return Promise.resolve(options);
 
+return new Promise ((resolve, reject) => {
+    s3.upload(options, (error, data) => {
+      if (error) {
+        reject(error);
+      }
+      resolve(data);
+    });
+  });
 };
 
 readFile(filename)
